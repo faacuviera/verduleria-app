@@ -1142,10 +1142,10 @@ function collectGlobalSearchHits(query){
     },
     {
       key: "alumnos",
-      label: "Alumno",
+      label: "Proveedor",
       dateKey: "",
       amountKey: null,
-      title: (r) => r.nombre || "Alumno",
+      title: (r) => r.nombre || "Proveedor",
       subtitle: (r) => r.programa || (r.cuota ? `Cuota: ${money(Number(r.cuota) || 0)}` : "")
     }
   ];
@@ -1228,7 +1228,7 @@ const FINANCE_FIELD_RULES = {
   cxc: {
     submitId: "addCxcBtn",
     fields: [
-      { id: "cxcnombre", key: "nombre", kind: "text", label: "el alumno o cliente" },
+      { id: "cxcnombre", key: "nombre", kind: "text", label: "el proveedor o cliente" },
       { id: "cxcvence", key: "vence", kind: "date", label: "esta cuenta por cobrar" },
       { id: "cxcconcepto", key: "concepto", kind: "text", label: "el concepto" },
       { id: "cxcmonto", key: "monto", kind: "amount", label: "esta cuenta por cobrar" }
@@ -2603,7 +2603,7 @@ function wireActions(){
     if (openAddAlumnoModalBtn) {
       openAddAlumnoModalBtn.addEventListener("click", () => {
         clearAlumnoForm();
-        openAddAlumnoModal({ title: "Agregar alumno" });
+        openAddAlumnoModal({ title: "Agregar proveedor" });
       });
     }
 
@@ -3382,7 +3382,7 @@ function initAddAlumnoModal() {
 
 function setAddAlumnoModalTitle(title) {
   if (!addAlumnoModalState?.titleEl) return;
-  addAlumnoModalState.titleEl.textContent = title || "Agregar alumno";
+  addAlumnoModalState.titleEl.textContent = title || "Agregar proveedor";
 }
 
 function openAddAlumnoModal({ title } = {}) {
@@ -3983,8 +3983,8 @@ function renderStudentModal(alumno) {
 
   const fullName = String(alumno?.nombre || "").trim();
   studentModalState.titleEl.textContent = fullName
-    ? `Ficha del alumno: ${fullName}`
-    : "Ficha del alumno";
+    ? `Ficha del proveedor: ${fullName}`
+    : "Ficha del proveedor";
 
   const fields = [
     { key: "nombre", label: "Nombre completo", value: alumno?.nombre },
@@ -4199,7 +4199,7 @@ function renderStudentPaymentsModal(alumno) {
   if (!entries.length) {
     studentPaymentsModalState.bodyEl.innerHTML = `
       <tr>
-        <td colspan="5" class="note-cell">No hay movimientos para ${escAttr(alumnoName || "este alumno")} en esta plantilla.</td>
+        <td colspan="5" class="note-cell">No hay movimientos para ${escAttr(alumnoName || "este proveedor")} en esta plantilla.</td>
       </tr>
     `;
     return;
@@ -4293,7 +4293,7 @@ function saveAlumno(id) {
   const rango       = document.getElementById(`ed_rango_${id}`)?.value.trim() || "";
   const estado      = document.getElementById(`ed_estado_${id}`)?.value || "Activo";
 
-  const cuota = requireMontoValue(cuotaStr, "la cuota del alumno");
+  const cuota = requireMontoValue(cuotaStr, "la cuota del proveedor");
   if (cuota === null) return;
   if (!nombre) return alert("El nombre no puede quedar vacío.");
 
@@ -4314,7 +4314,7 @@ function saveAlumno(id) {
 
   editMode = { section: null, id: null };
   render();
-  showSoftBanner("✅ Alumno guardado");
+  showSoftBanner("✅ Proveedor guardado");
 }
 
 // Si usás onclick="..." en HTML, esto asegura que existan
@@ -4402,7 +4402,7 @@ function renderAlumnos(){
 function addOrUpdateAlumno(){
   const active = getActive();
   const id = $("addAlumnoBtn").dataset.editId || generateAlumnoId();
-  const cuota = requireMontoValue($("alCuota").value, "la cuota del alumno");
+  const cuota = requireMontoValue($("alCuota").value, "la cuota del proveedor");
   if (cuota === null) return;
 
   const alumno = {
@@ -4451,7 +4451,7 @@ if (typeof renderResumen === "function") renderResumen();
 
 clearAlumnoForm();
 renderAlumnos();
-showSoftBanner("✅ Alumno guardado");
+showSoftBanner("✅ Proveedor guardado");
 closeAddAlumnoModal();
 
 
@@ -4476,12 +4476,12 @@ function editAlumno(id){
   $("alNotas").value = a.notas || "";
 
   $("addAlumnoBtn").dataset.editId = id;
-  $("addAlumnoBtn").textContent = "Actualizar alumno";
-  openAddAlumnoModal({ title: "Actualizar alumno" });
+  $("addAlumnoBtn").textContent = "Actualizar proveedor";
+  openAddAlumnoModal({ title: "Actualizar proveedor" });
 }
 
 const deleteAlumnoImpl = (id) => {
-  if(!confirm("¿Borrar alumno? Esto también elimina sus cuentas por cobrar.")) return;
+  if(!confirm("¿Borrar proveedor? Esto también elimina sus cuentas por cobrar.")) return;
 
   const active = getActive?.() || state?.active;
   if (!active) return;
@@ -4515,7 +4515,7 @@ const deleteAlumnoImpl = (id) => {
   });
 
   const after = (active.cxc || []).length;
-  log.info("CxC borradas junto con alumno", { eliminadas: before - after });
+  log.info("CxC borradas junto con proveedor", { eliminadas: before - after });
 
   saveActiveData(active);
   state.active = active;
@@ -4537,7 +4537,7 @@ function clearAlumnoForm(){
   $("alIngreso").value = todayISO();
   $("alPrograma").value = "BASICO";
   $("alEstado").value = "Activo";
-  $("addAlumnoBtn").textContent = "Guardar alumno";
+  $("addAlumnoBtn").textContent = "Guardar proveedor";
   delete $("addAlumnoBtn").dataset.editId;
 }
   
