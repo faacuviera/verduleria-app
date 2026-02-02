@@ -2668,13 +2668,6 @@ function wireActions(){
     const cxpFilterPagos = $("cxpFilterPagos");
     if (cxpFilterPagos) cxpFilterPagos.addEventListener("click", () => setCxpStatusFilter("pagos"));
 
-    const nac = $("alNacimiento");
-    if (nac) {
-      nac.addEventListener("change", ()=>{
-        const edad = $("alEdad");
-        if (edad) edad.value = calcAge(nac.value);
-      });
-    }
   } catch (err) {
     log.error("wireActions error:", err);
     alert("Error interno en la app. Revisá consola.");
@@ -3987,33 +3980,13 @@ function renderStudentModal(alumno) {
     : "Ficha del proveedor";
 
   const fields = [
-    { key: "nombre", label: "Nombre completo", value: alumno?.nombre },
-    { key: "nacimiento", label: "Fecha de nacimiento", value: alumno?.nacimiento },
-    { key: "edad", label: "Edad", value: alumno?.nacimiento },
-    { key: "telefono", label: "Teléfono", value: alumno?.telefono ?? alumno?.numero },
+    { key: "nombre", label: "Nombre proveedor", value: alumno?.nombre },
+    { key: "numero", label: "Número", value: alumno?.numero },
     { key: "direccion", label: "Dirección", value: alumno?.direccion },
-    { key: "email", label: "Email", value: alumno?.email },
-    { key: "ingreso", label: "Fecha de ingreso", value: alumno?.ingreso },
-    { key: "rango", label: "Rango", value: alumno?.rango },
-    { key: "ata", label: "Número ATA", value: alumno?.ata },
-    { key: "programa", label: "Programa", value: alumno?.programa },
-    { key: "cuota", label: "Cuota", value: alumno?.cuota },
-    { key: "estado", label: "Estado", value: alumno?.estado },
+    { key: "marcas", label: "Marca/s", value: alumno?.marcas },
+    { key: "producto", label: "Producto", value: alumno?.producto },
     { key: "notas", label: "Notas", value: alumno?.notas }
   ];
-
-  const knownKeys = new Set([...fields.map((field) => field.key), "numero", "tutor", "id"]);
-  const extraKeys = Object.keys(alumno || {})
-    .filter((key) => !knownKeys.has(key))
-    .sort((a, b) => a.localeCompare(b));
-
-  extraKeys.forEach((key) => {
-    fields.push({
-      key,
-      label: labelizeKey(key),
-      value: alumno?.[key]
-    });
-  });
 
   studentModalState.bodyEl.innerHTML = "";
   fields.forEach((field) => {
@@ -4283,18 +4256,14 @@ function closeStudentPaymentsModal() {
 }
 
 function saveAlumno(id) {
-  const nombre     = document.getElementById(`ed_nombre_${id}`)?.value.trim() || "";
-  const nacimiento = document.getElementById(`ed_nacimiento_${id}`)?.value || "";
-  const numero     = document.getElementById(`ed_numero_${id}`)?.value.trim() || "";
-  const ingreso    = document.getElementById(`ed_ingreso_${id}`)?.value || "";
-  const programa   = document.getElementById(`ed_programa_${id}`)?.value.trim() || "";
-  const cuotaStr   = document.getElementById(`ed_cuota_${id}`)?.value || "0";
-  const ata         = document.getElementById(`ed_at_${id}`)?.value.trim() || "";
-  const rango       = document.getElementById(`ed_rango_${id}`)?.value.trim() || "";
-  const estado      = document.getElementById(`ed_estado_${id}`)?.value || "Activo";
+  const nombre    = document.getElementById(`ed_nombre_${id}`)?.value.trim() || "";
+  const numero    = document.getElementById(`ed_numero_${id}`)?.value.trim() || "";
+  const direccion = document.getElementById(`ed_direccion_${id}`)?.value.trim() || "";
+  const marcas    = document.getElementById(`ed_marcas_${id}`)?.value.trim() || "";
+  const producto  = document.getElementById(`ed_producto_${id}`)?.value.trim() || "";
+  const notas     = document.getElementById(`ed_notas_${id}`)?.value.trim() || "";
+  const estado    = document.getElementById(`ed_estado_${id}`)?.value || "Activo";
 
-  const cuota = requireMontoValue(cuotaStr, "la cuota del proveedor");
-  if (cuota === null) return;
   if (!nombre) return alert("El nombre no puede quedar vacío.");
 
   const active = getActive();
@@ -4302,11 +4271,8 @@ function saveAlumno(id) {
 
   active.alumnos = arr.map(a => {
     if (a.id !== id) return a;
-    return { ...a, nombre, nacimiento, numero, ingreso, programa, cuota, ata, rango, estado };
+    return { ...a, nombre, numero, direccion, marcas, producto, notas, estado };
   });
-
-  const updatedAlumno = active.alumnos.find(a => a.id === id);
-  if (updatedAlumno) addCuotaPendiente(active, updatedAlumno);
 
   // ⚠️ IMPORTANTE:
   
@@ -4347,18 +4313,15 @@ function renderAlumnos(){
     const tr = document.createElement("tr");
     const editing = (editMode.section === "alumnos" && editMode.id === a.id);
 
-    const estado = a.estado || "Activo";
-    const estadoClass = estado === "Activo" ? "badge ok" : "badge due";
-
     if (!editing) {
       tr.classList.add("student-row");
       tr.innerHTML = `
         <td>${escAttr(a.nombre)}</td>
-        <td>${escAttr(calcAge(a.nacimiento))}</td>
-        <td>${money(a.cuota||0)}</td>
-        <td>${escAttr(a.ata||"")}</td>
-        <td>${escAttr(a.rango||"")}</td>
-        <td><span class="${estadoClass}">${escAttr(estado)}</span></td>
+        <td>${escAttr(a.numero||"")}</td>
+        <td>${escAttr(a.direccion||"")}</td>
+        <td>${escAttr(a.marcas||"")}</td>
+        <td>${escAttr(a.producto||"")}</td>
+        <td>${escAttr(a.notas||"")}</td>
         <td class="actions-cell">
           <button class="ghost" type="button" onclick="editAlumno('${a.id}')">Editar</button>
           <button class="ghost danger" type="button" onclick="deleteAlumno('${a.id}')">Borrar</button>
@@ -4367,21 +4330,12 @@ function renderAlumnos(){
       tr.innerHTML = `
         <td>
           <input id="ed_nombre_${a.id}" value="${escAttr(a.nombre)}" />
-          <input id="ed_nacimiento_${a.id}" type="hidden" value="${escAttr(a.nacimiento||"")}" />
-          <input id="ed_numero_${a.id}" type="hidden" value="${escAttr(a.numero||"")}" />
-          <input id="ed_ingreso_${a.id}" type="hidden" value="${escAttr(a.ingreso||"")}" />
-          <input id="ed_programa_${a.id}" type="hidden" value="${escAttr(a.programa||"")}" />
         </td>
-        <td>${escAttr(calcAge(a.nacimiento))}</td>
-        <td><input id="ed_cuota_${a.id}" type="number" min="0" step="1" value="${escAttr(a.cuota ?? 0)}" /></td>
-        <td><input id="ed_at_${a.id}" value="${escAttr(a.ata||"")}" /></td>
-        <td><input id="ed_rango_${a.id}" value="${escAttr(a.rango||"")}" /></td>
-        <td>
-          <select id="ed_estado_${a.id}">
-            <option value="Activo"${estado === "Activo" ? " selected" : ""}>Activo</option>
-            <option value="Inactivo"${estado === "Inactivo" ? " selected" : ""}>Inactivo</option>
-          </select>
-        </td>
+        <td><input id="ed_numero_${a.id}" value="${escAttr(a.numero||"")}" /></td>
+        <td><input id="ed_direccion_${a.id}" value="${escAttr(a.direccion||"")}" /></td>
+        <td><input id="ed_marcas_${a.id}" value="${escAttr(a.marcas||"")}" /></td>
+        <td><input id="ed_producto_${a.id}" value="${escAttr(a.producto||"")}" /></td>
+        <td><input id="ed_notas_${a.id}" value="${escAttr(a.notas||"")}" /></td>
         <td class="actions-cell">
           <button class="ghost" onclick="saveAlumno('${a.id}')">Guardar</button>
           <button class="ghost" onclick="cancelEdit()">Cancelar</button>
@@ -4402,22 +4356,16 @@ function renderAlumnos(){
 function addOrUpdateAlumno(){
   const active = getActive();
   const id = $("addAlumnoBtn").dataset.editId || generateAlumnoId();
-  const cuota = requireMontoValue($("alCuota").value, "la cuota del proveedor");
-  if (cuota === null) return;
+  const existing = (active.alumnos || []).find(a => a.id === id);
 
   const alumno = {
     id,
     nombre: $("alNombre").value.trim(),
-    nacimiento: $("alNacimiento").value,
     numero: $("alNumero").value,
-    ingreso: $("alIngreso").value || todayISO(),
-    programa: $("alPrograma").value,
-    rango: $("alRango").value,
-    cuota,
-    ata: $("alAta").value,
-    estado: $("alEstado").value || "Activo",
-    email: $("alEmail").value.trim(),
     direccion: $("alDireccion").value.trim(),
+    marcas: $("alMarcas").value.trim(),
+    producto: $("alProducto").value.trim(),
+    estado: existing?.estado || "Activo",
     notas: $("alNotas").value.trim()
   };
 
@@ -4430,8 +4378,6 @@ function addOrUpdateAlumno(){
 // ... donde ya guardás alumno ...
 if (idx >= 0) active.alumnos[idx] = alumno;
 else active.alumnos.push(alumno);
-
-addCuotaPendiente(active, alumno);
 
 
 log.info("CxC en memoria (active.cxc)", { cantidad: active.cxc?.length });
@@ -4462,17 +4408,10 @@ function editAlumno(id){
   if(!a) return;
 
   $("alNombre").value = a.nombre;
-  $("alNacimiento").value = a.nacimiento;
-  $("alEdad").value = calcAge(a.nacimiento);
   $("alNumero").value = a.numero;
-  $("alIngreso").value = a.ingreso;
-  $("alPrograma").value = a.programa;
-  $("alRango").value = a.rango || "";
-  $("alCuota").value = a.cuota;
-  $("alAta").value = a.ata;
-  $("alEstado").value = a.estado || "Activo";
-  $("alEmail").value = a.email || "";
   $("alDireccion").value = a.direccion || "";
+  $("alMarcas").value = a.marcas || "";
+  $("alProducto").value = a.producto || "";
   $("alNotas").value = a.notas || "";
 
   $("addAlumnoBtn").dataset.editId = id;
@@ -4491,7 +4430,6 @@ const deleteAlumnoImpl = (id) => {
 
   const nombre = String(alumno?.nombre || "").trim().toLowerCase();
   const numero = String(alumno?.numero || "").trim();
-  const ata    = String(alumno?.ata || "").trim();
 
   // 1) borrar alumno
   active.alumnos = (active.alumnos || []).filter(a => String(a.id).trim() !== alumnoId);
@@ -4503,15 +4441,13 @@ const deleteAlumnoImpl = (id) => {
     const cNombre = String(c.nombre || c.cliente || c.alumno || "").trim().toLowerCase();
     const cAlumnoId = String(c.alumnoId || c.clienteId || c.refAlumnoId || "").trim();
     const cNumero = String(c.numero || c.doc || "").trim();
-    const cAta    = String(c.ata || "").trim();
 
     const matchById = cAlumnoId && cAlumnoId === alumnoId;
     const matchByNombre = nombre && cNombre === nombre;
     const matchByNumero = numero && cNumero === numero;
-    const matchByAta = ata && cAta === ata;
 
     // si matchea por cualquiera → se elimina (o sea, NO se conserva)
-    return !(matchById || matchByNombre || matchByNumero || matchByAta);
+    return !(matchById || matchByNombre || matchByNumero);
   });
 
   const after = (active.cxc || []).length;
@@ -4531,12 +4467,8 @@ window.deleteAlumno = deleteAlumnoImpl;
 
 
 function clearAlumnoForm(){
-  ["alNombre","alNacimiento","alEdad","alNumero","alCuota","alAta","alEmail","alDireccion","alNotas","alRango"]
+  ["alNombre","alNumero","alDireccion","alMarcas","alProducto","alNotas"]
     .forEach(id => $(id).value = "");
-
-  $("alIngreso").value = todayISO();
-  $("alPrograma").value = "BASICO";
-  $("alEstado").value = "Activo";
   $("addAlumnoBtn").textContent = "Guardar proveedor";
   delete $("addAlumnoBtn").dataset.editId;
 }
