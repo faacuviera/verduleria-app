@@ -496,7 +496,7 @@
           </div>
           <div>
             <label>Buscar</label>
-            <input id="alSearch" placeholder="Nombre / número / ID..."/>
+            <input id="alSearch" placeholder="Nombre / número / producto..."/>
           </div>
         </div>
 
@@ -504,7 +504,13 @@
           <table>
             <thead>
               <tr>
-                <th>Nombre completo</th><th>Edad</th><th>Cuota</th><th>Número ATA</th><th>Rango</th><th>Estado</th><th>Acciones</th>
+                <th>Nombre proveedor</th>
+                <th>Número</th>
+                <th>Dirección</th>
+                <th>Marca/s</th>
+                <th>Producto</th>
+                <th>Notas</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="alTbody"></tbody>
@@ -569,19 +575,8 @@
   <div class="student-modal__body">
     <div class="row">
       <div>
-        <label>Nombre</label>
-        <input id="alNombre" placeholder="Ej: Juan Pérez"/>
-      </div>
-      <div>
-        <label>Fecha de nacimiento</label>
-        <input id="alNacimiento" type="date"/>
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label>Edad (automática)</label>
-        <input id="alEdad" type="number" readonly/>
+        <label>Nombre proveedor</label>
+        <input id="alNombre" placeholder="Ej: Verdulería Central"/>
       </div>
       <div>
         <label>Número</label>
@@ -591,74 +586,19 @@
 
     <div class="row">
       <div>
-        <label>Email</label>
-        <input id="alEmail" type="email" placeholder="Opcional"/>
-      </div>
-      <div>
         <label>Dirección</label>
         <input id="alDireccion" placeholder="Opcional"/>
       </div>
-    </div>
-
-    <div class="row">
       <div>
-        <label>Fecha ingreso</label>
-        <input id="alIngreso" type="date" required/>
-      </div>
-      <div>
-        <label>Programa</label>
-        <select id="alPrograma">
-          <option value="BASICO">BASICO</option>
-          <option value="BLACK BELT CLUB">BLACK BELT CLUB</option>
-          <option value="LIDER">LIDER</option>
-        </select>
+        <label>Marca/s</label>
+        <input id="alMarcas" placeholder="Opcional"/>
       </div>
     </div>
 
     <div class="row">
       <div>
-        <label>Cuota</label>
-        <input id="alCuota" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" required/>
-      </div>
-      <div>
-        <label>Estado</label>
-        <select id="alEstado">
-          <option value="Activo">Activo</option>
-          <option value="Inactivo">Inactivo</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label>Rango</label>
-        <select id="alRango">
-          <option value="">Seleccionar rango</option>
-          <option value="BLANCO" class="rango-option rango-option--blanco">BLANCO</option>
-          <option value="NARANJA" class="rango-option rango-option--naranja">NARANJA</option>
-          <option value="AMARILLO" class="rango-option rango-option--amarillo">AMARILLO</option>
-          <option value="CAMUFLADO" class="rango-option rango-option--camuflado">CAMUFLADO</option>
-          <option value="VERDE" class="rango-option rango-option--verde">VERDE</option>
-          <option value="VIOLETA R" class="rango-option rango-option--violeta">VIOLETA R</option>
-          <option value="VIOLETA D" class="rango-option rango-option--violeta-dark">VIOLETA D</option>
-          <option value="AZUL R" class="rango-option rango-option--azul">AZUL R</option>
-          <option value="AZUL D" class="rango-option rango-option--azul-dark">AZUL D</option>
-          <option value="MARRON R" class="rango-option rango-option--marron">MARRON R</option>
-          <option value="MARRON D" class="rango-option rango-option--marron-dark">MARRON D</option>
-          <option value="ROJO R" class="rango-option rango-option--rojo">ROJO R</option>
-          <option value="ROJO D" class="rango-option rango-option--rojo-dark">ROJO D</option>
-          <option value="ROJO NEGRO R" class="rango-option rango-option--rojo-negro">ROJO NEGRO R</option>
-          <option value="ROJO NEGRO D" class="rango-option rango-option--rojo-negro-dark">ROJO NEGRO D</option>
-          <option value="NEGRO PLENO" class="rango-option rango-option--negro">NEGRO PLENO</option>
-          <option value="1BD" class="rango-option rango-option--negro">1BD</option>
-          <option value="2BD" class="rango-option rango-option--negro">2BD</option>
-          <option value="3BD" class="rango-option rango-option--negro">3BD</option>
-          <option value="4BD" class="rango-option rango-option--negro">4BD</option>
-        </select>
-      </div>
-      <div>
-        <label>Número ATA</label>
-        <input id="alAta" placeholder="Opcional"/>
+        <label>Producto</label>
+        <input id="alProducto" placeholder="Opcional"/>
       </div>
     </div>
 
