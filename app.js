@@ -17,6 +17,7 @@ import {
   validatePositiveAmount,
   validateRequiredText
 } from "./validation.js";
+import { supabaseClient } from "./supabase.js";
 
 const $ = (id)=>document.getElementById(id);
 /* ---------- Logging & non-fatal notifications ---------- */
@@ -35,14 +36,6 @@ function createLogger(scope) {
 
 const log = createLogger("XA");
 const storageStats = { failures: 0 };
-const appConfig = window.APP_CONFIG || {};
-const SUPABASE_URL = appConfig.SUPABASE_URL;
-const SUPABASE_ANON_KEY = appConfig.SUPABASE_ANON_KEY;
-const supabaseClient = window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  })
-  : null;
 const CLOUD_SAVE_DEBOUNCE_MS = 1500;
 let supabaseSession = null;
 let supabaseUser = null;
