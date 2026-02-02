@@ -887,7 +887,6 @@ async function init(){
 
   // Load active data
   state.active = getActive();
-  updateIngresoAlumnoSelect();
 
   // asegurar arrays
   state.active.cxc ??= [];
@@ -1213,11 +1212,9 @@ const FINANCE_FIELD_RULES = {
   ingresos: {
     submitId: "addIngresoBtn",
     fields: [
-      { id: "inAlumno", key: "alumnoId", kind: "text", label: "el alumno" },
+      { id: "inConcepto", key: "concepto", kind: "text", label: "el ingreso" },
       { id: "inFecha", key: "fecha", kind: "date", label: "este ingreso" },
-      { id: "inTipo", key: "tipo", kind: "text", label: "el tipo" },
-      { id: "inMonto", key: "monto", kind: "amount", label: "este ingreso" },
-      { id: "inEstado", key: "estado", kind: "text", label: "el estado" }
+      { id: "inMonto", key: "monto", kind: "amount", label: "este ingreso" }
     ]
   },
   gastos: {
@@ -1318,37 +1315,6 @@ function setupFinanceValidationListeners() {
     });
     runFinanceValidation(section);
   });
-}
-
-function getSortedAlumnos(list) {
-  return (list || []).slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
-}
-
-function buildAlumnoSelectOptionsHTML(selectedId, alumnos) {
-  const selectedValue = String(selectedId || "");
-  const options = [
-    `<option value="" disabled${selectedValue ? "" : " selected"}>— Seleccionar alumno —</option>`
-  ];
-
-  getSortedAlumnos(alumnos).forEach((alumno) => {
-    const id = String(alumno?.id || "");
-    const name = alumno?.nombre || "";
-    if (!id || !name) return;
-    options.push(
-      `<option value="${escAttr(id)}"${id === selectedValue ? " selected" : ""}>${escAttr(name)}</option>`
-    );
-  });
-
-  return options.join("");
-}
-
-function updateIngresoAlumnoSelect(selectedId = "") {
-  const select = $("inAlumno");
-  if (!select) return;
-  const alumnos = state.active?.alumnos || [];
-  const html = buildAlumnoSelectOptionsHTML(selectedId, alumnos);
-  select.innerHTML = html;
-  if (selectedId) select.value = selectedId;
 }
 
 /* ---------- Rendering ---------- */
@@ -1529,43 +1495,27 @@ function renderIngresos(){
   for (const r of rows){
     const editing = (editMode.section === "ingresos" && editMode.id === r.id);
     const tr = document.createElement("tr");
-    const displayName = getRecordAlumnoName(r);
-    const alumnoId = r.alumnoId || findAlumnoIdByName(displayName, state.active?.alumnos);
 
     if (editing) tr.classList.add("editing-row");
 
     if (!editing) {
       tr.innerHTML = `
         <th scope="row">${escAttr(r.fecha||"")}</th>
-        <td>${escAttr(displayName||"")}</td>
         <td>${escAttr(r.concepto||"")}</td>
         <td>${money(r.monto||0)}</td>
         <td>${escAttr(r.medio||"")}</td>
-        <td><span class="badge ${r.estado==="Pagado"?"ok":""}">${escAttr(r.estado||"")}</span></td>
         <td class="note-cell">${noteHtml(r.notas)}</td>
         <td class="actions-cell">
-          <button class="ghost" data-act="edit" data-id="${r.id}" aria-label="Editar ingreso ${escAttr(r.concepto||"")} de ${escAttr(displayName||"")}">Editar</button>
-          <button class="ghost danger" data-act="del" data-id="${r.id}" aria-label="Borrar ingreso ${escAttr(r.concepto||"")} de ${escAttr(displayName||"")}">Borrar</button>
+          <button class="ghost" data-act="edit" data-id="${r.id}" aria-label="Editar ingreso ${escAttr(r.concepto||"")}">Editar</button>
+          <button class="ghost danger" data-act="del" data-id="${r.id}" aria-label="Borrar ingreso ${escAttr(r.concepto||"")}">Borrar</button>
         </td>
       `;
     } else {
       tr.innerHTML = `
         <td><input id="ed_ing_fecha_${r.id}" type="date" value="${escAttr(r.fecha||"")}" /></td>
-        <td>
-          <select id="ed_ing_alumno_${r.id}">
-            ${buildAlumnoSelectOptionsHTML(alumnoId, state.active?.alumnos)}
-          </select>
-        </td>
         <td><input id="ed_ing_concepto_${r.id}" value="${escAttr(r.concepto||"")}" /></td>
         <td><input id="ed_ing_monto_${r.id}" type="number" min="0" step="1" value="${escAttr(r.monto ?? 0)}" /></td>
         <td><input id="ed_ing_medio_${r.id}" value="${escAttr(r.medio||"")}" /></td>
-        <td>
-          <select id="ed_ing_estado_${r.id}">
-            <option value="" ${!r.estado ? "selected" : ""}></option>
-            <option value="Pagado" ${r.estado==="Pagado" ? "selected" : ""}>Pagado</option>
-            <option value="Pendiente" ${r.estado==="Pendiente" ? "selected" : ""}>Pendiente</option>
-          </select>
-        </td>
         <td><textarea id="ed_ing_notas_${r.id}">${escAttr(r.notas||"")}</textarea></td>
         <td class="actions-cell">
           <button class="ghost" data-act="save" data-id="${r.id}">Guardar</button>
@@ -1732,11 +1682,9 @@ function editIngreso(id){
 
 function saveIngreso(id){
   const fecha    = requireDateValue(document.getElementById(`ed_ing_fecha_${id}`)?.value, "este ingreso");
-  const alumnoId = document.getElementById(`ed_ing_alumno_${id}`)?.value || "";
   const concepto = document.getElementById(`ed_ing_concepto_${id}`)?.value.trim() || "";
   const montoStr = document.getElementById(`ed_ing_monto_${id}`)?.value || "0";
   const medio    = document.getElementById(`ed_ing_medio_${id}`)?.value.trim() || "";
-  const estado   = document.getElementById(`ed_ing_estado_${id}`)?.value || "";
   const notas    = document.getElementById(`ed_ing_notas_${id}`)?.value || "";
 
   if (!fecha) return;
@@ -1744,24 +1692,13 @@ function saveIngreso(id){
   if (monto === null) return;
 
   const active = getActive();
-  const alumno = (active.alumnos || []).find((item) => String(item.id) === String(alumnoId));
-  if (!alumnoId || !alumno?.nombre) {
-    alert("Tenés que seleccionar un alumno válido.");
-    return;
-  }
-
-  const alumnoNombre = alumno.nombre.trim();
   active.ingresos = (active.ingresos || []).map(r =>
     r.id === id ? {
       ...r,
       fecha,
-      alumnoId,
-      alumnoNombre,
-      nombre: alumnoNombre,
       concepto,
       monto,
       medio,
-      estado,
       notas
     } : r
   );
@@ -2060,16 +1997,10 @@ async function delRow(listName, id) {
 
 function loadIngreso(id){
   const r=(state.active.ingresos||[]).find(x=>x.id===id); if(!r) return;
-  const alumnos = state.active?.alumnos || [];
-  const displayName = getRecordAlumnoName(r);
-  const selectedId = r.alumnoId || findAlumnoIdByName(displayName, alumnos);
-  updateIngresoAlumnoSelect(selectedId);
   $("inFecha").value=r.fecha||todayISO();
-  $("inTipo").value=r.tipo||"";
   $("inConcepto").value=r.concepto||"";
   $("inMonto").value=r.monto||"";
   $("inMedio").value=r.medio||"Efectivo";
-  $("inEstado").value=r.estado||"";
   $("inNotas").value=r.notas||"";
   $("addIngresoBtn").dataset.editId=id;
   $("addIngresoBtn").textContent="Actualizar ingreso";
@@ -2077,11 +2008,8 @@ function loadIngreso(id){
 }
 function clearIngresoForm(){
   ["inConcepto","inMonto","inNotas"].forEach(id=>$(id).value="");
-  updateIngresoAlumnoSelect("");
   $("inFecha").value=todayISO();
-  $("inTipo").value="";
   $("inMedio").value="Efectivo";
-  $("inEstado").value="";
   delete $("addIngresoBtn").dataset.editId;
   $("addIngresoBtn").textContent="Guardar ingreso";
   runFinanceValidation("ingresos");
@@ -2366,7 +2294,10 @@ function renderResumen() {
   const active = getActive?.() || state?.active;
   if (!active) return;
 
-  const ingresos = (active.ingresos || []).filter(i => (i.estado || "").toLowerCase() === "pagado");
+  const ingresos = (active.ingresos || []).filter(i => {
+    const estado = String(i.estado || "").toLowerCase();
+    return !estado || estado === "pagado";
+  });
   const egresos  = (active.egresos  || []).filter(e => (e.estado || "pagado").toLowerCase() === "pagado");
 
   const totalIngresos = ingresos.reduce((a, i) => a + Number(i.monto || 0), 0);
@@ -2419,28 +2350,15 @@ function wireActions(){
       const { hasError, values } = runFinanceValidation("ingresos");
       if (hasError) return;
       const active = getActive();
-      const alumnoId = values.alumnoId || "";
-      const alumno = (active.alumnos || []).find((item) => String(item.id) === String(alumnoId));
-      if (!alumno?.nombre) {
-        alert("Tenés que seleccionar un alumno válido.");
-        return;
-      }
-
-      const alumnoNombre = alumno.nombre.trim();
       const templateId = state.activeTemplateId || getActiveId();
       const mes = getActiveTemplateName();
 
       const data={
         id: $("addIngresoBtn").dataset.editId || uid(),
-        alumnoId,
-        alumnoNombre,
-        nombre: alumnoNombre,
         fecha: values.fecha || todayISO(),
-        tipo: values.tipo || "",
-        concepto: $("inConcepto").value.trim(),
+        concepto: values.concepto || $("inConcepto").value.trim(),
         monto: values.monto ?? 0,
         medio: $("inMedio").value,
-        estado: values.estado || $("inEstado").value,
         notas: $("inNotas").value.trim(),
         templateId,
         mes
@@ -2887,7 +2805,7 @@ async function importBackup(e){
 }
 
 const CSV_IMPORT_HEADERS = {
-  ingresos: ["fecha", "nombre", "concepto", "monto", "medio", "estado", "notas"],
+  ingresos: ["fecha", "concepto", "monto", "medio", "notas"],
   gastos: ["fecha", "concepto", "categoria", "monto", "notas"],
   cxc: ["vence", "nombre", "concepto", "monto", "estado", "notas"],
   cxp: ["vence", "proveedor", "concepto", "monto", "estado", "notas"],
@@ -2940,11 +2858,9 @@ function buildCsvRecord(listName, raw) {
     return {
       id: uid(),
       fecha,
-      nombre: value("nombre"),
       concepto,
       monto: parseCsvNumber(raw.monto),
       medio: value("medio"),
-      estado: value("estado") || "Pagado",
       notas: value("notas")
     };
   }
@@ -3057,7 +2973,7 @@ function exportCSV(listName){
   const t = state.active;
   const rows = (t[listName]||[]);
   let headers=[];
-  if(listName==="ingresos") headers=["fecha","nombre","concepto","monto","medio","estado","notas"];
+  if(listName==="ingresos") headers=["fecha","concepto","monto","medio","notas"];
   if(listName==="gastos") headers=["fecha","concepto","categoria","monto","notas"];
   if(listName==="cxc") headers=["vence","nombre","concepto","monto","estado","notas"];
   if(listName==="cxp") headers=["vence","proveedor","concepto","monto","estado","notas"];
@@ -3070,7 +2986,7 @@ async function exportAllZip(){
   // Build a zip in-browser using CompressionStream if available; fallback to multiple downloads.
   const t = state.active;
   const files = [
-    {name:`ingresos.csv`, data: toCSV(t.ingresos||[], ["fecha","nombre","concepto","monto","medio","estado","notas"])},
+    {name:`ingresos.csv`, data: toCSV(t.ingresos||[], ["fecha","concepto","monto","medio","notas"])},
     {name:`egresos.csv`, data: toCSV(t.gastos||[], ["fecha","concepto","categoria","monto","notas"])},
     {name:`cxc.csv`, data: toCSV(t.cxc||[], ["vence","nombre","concepto","monto","estado","notas"])},
     {name:`cxp.csv`, data: toCSV(t.cxp||[], ["vence","proveedor","concepto","monto","estado","notas"])},
@@ -3559,7 +3475,6 @@ function openAddIngresoModal({ title } = {}) {
   if (!addIngresoModalState?.container) return;
 
   setAddIngresoModalTitle(title);
-  updateIngresoAlumnoSelect($("inAlumno")?.value || "");
 
   if (addIngresoModalState.supported) {
     if (!addIngresoModalState.dialog.open) addIngresoModalState.dialog.showModal();
