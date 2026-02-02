@@ -2007,14 +2007,17 @@ function loadIngreso(id){
   runFinanceValidation("ingresos");
 }
 function clearIngresoForm(){
-  ["inConcepto","inMonto","inNotas"].forEach((id) => {
+  const defaults = {
+    inConcepto: "",
+    inMonto: "",
+    inNotas: "",
+    inFecha: todayISO(),
+    inMedio: "Efectivo"
+  };
+  Object.entries(defaults).forEach(([id, value]) => {
     const el = $(id);
-    if (el) el.value = "";
+    if (el) el.value = value;
   });
-  const fecha = $("inFecha");
-  if (fecha) fecha.value = todayISO();
-  const medio = $("inMedio");
-  if (medio) medio.value = "Efectivo";
   const btn = $("addIngresoBtn");
   if (btn) {
     delete btn.dataset.editId;
