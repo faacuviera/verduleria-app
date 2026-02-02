@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#000000"/>
+  <title>JEEO - Cuentas</title>
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="icon" href="Logo.png"/>
+  <link rel="apple-touch-icon" href="Logo.png"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <img src="Logo.png" alt="JEEO"/>
+      <div class="t">
+        <strong>JEEO — Cuentas</strong>
+        <span id="activeTemplateLabel">Plantilla: —</span>
+      </div>
+    </div>
+    <div class="auth-actions">
+      <div class="small" id="authUserLabel">Sesión no iniciada</div>
+      <button class="ghost" id="authSignOutHeaderBtn" type="button">Salir</button>
+    </div>
+  </div>
+  <div class="nav" role="tablist" aria-label="Secciones financieras">
+    <button data-tab="dashboard" class="active">Resumen</button>
+    <button data-tab="ingresos">Ingresos</button>
+    <button data-tab="gastos">Egresos</button>
+    <button data-tab="cxc">Por cobrar</button>
+    <button data-tab="cxp">Por pagar</button>
+    <button data-tab="alumnos">Alumnos</button>
+    <button data-tab="inventario">Inventario</button>
+    <button data-tab="plantillas">Plantillas</button>
+  </div>
+</header>
+
+<div id="appAlerts" class="app-alerts" aria-live="polite" aria-atomic="true"></div>
+<div id="syncBanner" class="sync-banner" role="status" aria-live="polite" hidden>No se pudo sincronizar. Estás trabajando offline.</div>
+
+<div id="authOverlay" class="auth-overlay" hidden>
+  <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <h2 id="authTitle">Ingresá con tu cuenta</h2>
+    <p class="small" id="authStatus">Usá tu email y contraseña para sincronizar tus plantillas.</p>
+    <div class="row">
+      <div>
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" autocomplete="email" placeholder="tu@email.com"/>
+      </div>
+      <div>
+        <label for="authPassword">Contraseña</label>
+        <input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••"/>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="authSignInBtn" type="button">Entrar</button>
+      <button class="ghost" id="authSignOutBtn" type="button">Salir</button>
+    </div>
+  </div>
+</div>
+
+<main id="financePanel" class="container">
+
+  <!-- DASHBOARD -->
+  <section id="tab-dashboard" class="tab">
+    <div class="card">
+      <h2>Resumen del mes</h2>
+      <div class="body">
+        <div class="kpis">
+          <div class="kpi"><div class="l">Ingresos</div><div class="n" id="kpiIngresos">$ 0</div></div>
+          <div class="kpi"><div class="l">Egresos</div><div class="n" id="kpiGastos">$ 0</div></div>
+          <div class="kpi"><div class="l">Balance</div><div class="n" id="kpiBalance">$ 0</div><div class="small" id="kpiHint"></div></div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <div>
+            <label>Filtrar por mes</label>
+            <input id="monthFilter" type="month"/>
+          </div>
+          <div>
+            <label>Búsqueda rápida</label>
+            <input id="searchAll" placeholder="Ej: Lucía, CUOTA, UTE..."/>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="exportBackupBtn">Exportar respaldo (JSON)</button>
+          <button class="ghost" id="exportCsvAllBtn">Exportar TODO (CSV ZIP)</button>
+        </div>
+        <div id="searchResults" class="search-results" aria-live="polite">
+          <div class="search-results__header">
+            <div class="search-results__title">Resultados en todas las plantillas</div>
+            <div class="small" id="searchResultsCount">Buscá por nombre, concepto o proveedor.</div>
+          </div>
+          <div id="searchResultsList" class="search-results__list small">
+            Escribí algo en “Búsqueda rápida” para ver coincidencias.
+          </div>
+        </div>
+        <p class="small" style="margin-top:10px;">
+          Tip: en iPhone instalá como app desde Safari → Compartir → “Agregar a pantalla de inicio”.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- INGRESOS -->
+  <section id="tab-ingresos" class="tab" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>
+          <span>Ingresos <span class="badge" id="ingCount">0</span></span>
+          <button class="ghost" id="openAddIngresoModalBtn" type="button">Agregar ingreso</button>
+        </h2>
+        <div class="body">
+          <div class="row">
+            <div>
+              <label>Buscar</label>
+              <input id="ingSearch" placeholder="Alumno / concepto..."/>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Alumno</th><th>Concepto</th><th>Monto</th><th>Medio</th><th>Estado</th><th>Notas</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ingTbody"></tbody>
+            </table>
+          </div>
+          <p class="small">Sugerencia: usá “Por cobrar” para cargar cuotas pendientes y después marcarlas como pagadas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GASTOS -->
+  <section id="tab-gastos" class="tab" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>
+          <span>Egresos <span class="badge" id="gasCount">0</span></span>
+          <button class="ghost" id="openAddGastoModalBtn" type="button">Agregar egreso</button>
+        </h2>
+        <div class="body">
+          <div class="row">
+            <div>
+              <label>Buscar</label>
+              <input id="gasSearch" placeholder="Concepto / categoría..."/>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Monto</th><th>Notas</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="gasTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CXC -->
+  <section id="tab-cxc" class="tab" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>
+          <span>Cuentas por cobrar <span class="badge" id="cxcCount">0</span></span>
+          <button class="ghost" id="openAddCxcModalBtn" type="button">Agregar cuenta</button>
+        </h2>
+        <div class="body">
+          <div class="row">
+            <div>
+              <label>Estado</label>
+              <div class="filter-toggle" role="group" aria-label="Filtrar cuentas por cobrar por estado">
+                <button class="ghost active" id="cxcFilterPendientes" type="button" aria-pressed="true">Pendientes</button>
+                <button class="ghost" id="cxcFilterPagos" type="button" aria-pressed="false">Pagos</button>
+              </div>
+            </div>
+            <div>
+              <label>Buscar</label>
+              <input id="cxcSearch" placeholder="Nombre / concepto..."/>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th><th>Concepto</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th>Notas</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="cxcTbody"></tbody>
+            </table>
+          </div>
+          <p class="small">Botón “Marcar pagado” crea el ingreso automáticamente.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CXP -->
+  <section id="tab-cxp" class="tab" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>
+          <span>Cuentas por pagar <span class="badge" id="cxpCount">0</span></span>
+          <button class="ghost" id="openAddCxpModalBtn" type="button">Agregar cuenta</button>
+        </h2>
+        <div class="body">
+          <div class="row">
+            <div>
+              <label>Estado</label>
+              <div class="filter-toggle" role="group" aria-label="Filtrar cuentas por pagar por estado">
+                <button class="ghost active" id="cxpFilterPendientes" type="button" aria-pressed="true">Pendientes</button>
+                <button class="ghost" id="cxpFilterPagos" type="button" aria-pressed="false">Pagos</button>
+              </div>
+            </div>
+            <div>
+              <label>Buscar</label>
+              <input id="cxpSearch" placeholder="Proveedor / concepto..."/>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Vence</th><th>Proveedor</th><th>Concepto</th><th>Monto</th><th>Estado</th><th>Notas</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="cxpTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<dialog id="addIngresoModal" class="student-modal" aria-labelledby="addIngresoModalTitle">
+  <div class="student-modal__header">
+    <h3 id="addIngresoModalTitle" data-add-ingreso-title>Agregar ingreso</h3>
+    <button type="button" class="ghost" data-add-ingreso-close>Cerrar</button>
+  </div>
+  <div class="student-modal__body">
+    <div>
+      <label>Alumno</label>
+      <select id="inAlumno" required>
+        <option value="" disabled selected>— Seleccionar alumno —</option>
+      </select>
+    </div>
+    <div class="row">
+      <div>
+        <label>Fecha</label>
+        <input id="inFecha" type="date" required/>
+      </div>
+      <div>
+        <label>Tipo</label>
+        <select id="inTipo" required>
+          <option value="" disabled selected>— Seleccionar tipo —</option>
+          <option value="Cuota">Cuota</option>
+          <option value="Mercadería">Mercadería</option>
+          <option value="Clase privada">Clase privada</option>
+          <option value="Evento">Evento</option>
+          <option value="Inscripción">Inscripción</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Qué pagó</label>
+        <input id="inConcepto" placeholder="Ej: CUOTA / EXAMEN / UNIFORME"/>
+      </div>
+      <div>
+        <label>Monto</label>
+        <input id="inMonto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" required/>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Medio de pago</label>
+        <select id="inMedio">
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+          <option value="Débito">Débito</option>
+          <option value="Crédito">Crédito</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label>Estado</label>
+        <select id="inEstado" required>
+          <option value="" disabled selected>— Seleccionar estado —</option>
+          <option value="Pagado">Pagado</option>
+          <option value="Pendiente">Pendiente</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label>Notas</label>
+      <textarea id="inNotas" placeholder="Opcional"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="addIngresoBtn">Guardar ingreso</button>
+      <button class="ghost" id="clearIngresoBtn">Limpiar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="addGastoModal" class="student-modal" aria-labelledby="addGastoModalTitle">
+  <div class="student-modal__header">
+    <h3 id="addGastoModalTitle" data-add-gasto-title>Agregar egreso</h3>
+    <button type="button" class="ghost" data-add-gasto-close>Cerrar</button>
+  </div>
+  <div class="student-modal__body">
+    <div class="row">
+      <div>
+        <label>Qué pagaste</label>
+        <input id="gaConcepto" placeholder="Ej: UTE / OSE / alquiler"/>
+      </div>
+      <div>
+        <label>Fecha</label>
+        <input id="gaFecha" type="date" required/>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Monto</label>
+        <input id="gaMonto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" required/>
+      </div>
+      <div>
+        <label>Categoría</label>
+        <input id="gaCategoria" placeholder="Ej: Servicios / Materiales"/>
+      </div>
+    </div>
+    <div>
+      <label>Notas</label>
+      <textarea id="gaNotas" placeholder="Opcional"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="addGastoBtn">Guardar egreso</button>
+      <button class="ghost" id="clearGastoBtn">Limpiar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="addCxcModal" class="student-modal" aria-labelledby="addCxcModalTitle">
+  <div class="student-modal__header">
+    <h3 id="addCxcModalTitle" data-add-cxc-title>Agregar cuenta por cobrar</h3>
+    <button type="button" class="ghost" data-add-cxc-close>Cerrar</button>
+  </div>
+  <div class="student-modal__body">
+    <div class="row">
+      <div>
+        <label>Alumno / Cliente</label>
+        <input id="cxcnombre" placeholder="Ej: Agustín Marino"/>
+      </div>
+      <div>
+        <label>Vencimiento</label>
+        <input id="cxcvence" type="date" required/>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Concepto</label>
+        <input id="cxcconcepto" placeholder="Ej: CUOTA"/>
+      </div>
+      <div>
+        <label>Monto</label>
+        <input id="cxcmonto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" required/>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Estado</label>
+        <select id="cxcestado">
+          <option value="Pendiente">Pendiente</option>
+          <option value="Pagado">Pagado</option>
+        </select>
+      </div>
+      <div>
+        <label>Notas</label>
+        <input id="cxcnotas" placeholder="Opcional"/>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="addCxcBtn">Guardar</button>
+      <button class="ghost" id="clearCxcBtn">Limpiar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="addCxpModal" class="student-modal" aria-labelledby="addCxpModalTitle">
+  <div class="student-modal__header">
+    <h3 id="addCxpModalTitle" data-add-cxp-title>Agregar cuenta por pagar</h3>
+    <button type="button" class="ghost" data-add-cxp-close>Cerrar</button>
+  </div>
+  <div class="student-modal__body">
+    <div class="row">
+      <div>
+        <label>Proveedor / Servicio</label>
+        <input id="cxpproveedor" placeholder="Ej: UTE"/>
+      </div>
+      <div>
+        <label>Vencimiento</label>
+        <input id="cxpvence" type="date" required/>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Concepto</label>
+        <input id="cxpconcepto" placeholder="Ej: Electricidad"/>
+      </div>
+      <div>
+        <label>Monto</label>
+        <input id="cxpmonto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" required/>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Estado</label>
+        <select id="cxpestado">
+          <option value="Pendiente">Pendiente</option>
+          <option value="Pagado">Pagado</option>
+        </select>
+      </div>
+      <div>
+        <label>Notas</label>
+        <input id="cxpnotas" placeholder="Opcional"/>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="addCxpBtn">Guardar</button>
+      <button class="ghost" id="clearCxpBtn">Limpiar</button>
+    </div>
+  </div>
+</dialog>
+
+  <!-- INVENTARIO -->
+  <section id="tab-inventario" class="tab" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>
+          <span>Inventario <span class="badge" id="invCount">0</span></span>
+          <button class="ghost" id="openAddInventarioModalBtn" type="button">Agregar producto</button>
+        </h2>
+        <div class="body">
+          <div class="row">
+            <div>
+              <label>Buscar</label>
+              <input id="invSearch" placeholder="Categoría / producto..."/>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Categoría</th><th>Producto</th><th>Stock</th><th>Mínimo</th><th>Costo</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="invTbody"></tbody>
+            </table>
+          </div>
+          <p class="small">Te marca “bajo stock” cuando stock &lt;= mínimo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<dialog id="addInventarioModal" class="student-modal" aria-labelledby="addInventarioModalTitle">
+  <div class="student-modal__header">
+    <h3 id="addInventarioModalTitle" data-add-inventario-title>Agregar producto</h3>
+    <button type="button" class="ghost" data-add-inventario-close>Cerrar</button>
+  </div>
+  <div class="student-modal__body">
+    <div class="row">
+      <div>
+        <label>Categoría</label>
+        <input id="invCategoria" placeholder="Ej: Uniformes / Cinturones"/>
+      </div>
+      <div>
+        <label>Producto</label>
+        <input id="invProducto" placeholder="Ej: Dobok T3"/>
+      </div>
+    </div>
+    <div class="row3">
+      <div>
+        <label>Stock</label>
+        <input id="invStock" type="number" inputmode="numeric" min="0" step="1" placeholder="0" required/>
+      </div>
+      <div>
+        <label>Stock mínimo</label>
+        <input id="invMin" type="number" inputmode="numeric" min="0" step="1" placeholder="0" required/>
+      </div>
+      <div>
+        <label>Costo unitario (opcional)</label>
+        <input id="invCosto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0"/>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="saveInvBtn">Guardar</button>
+      <button class="ghost" id="clearInvBtn">Limpiar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ALUMNOS -->
+<section id="tab-alumnos" class="tab" hidden>
+  <div class="grid">
+    <div class="card">
+      <h2>
+        <span>Alumnos <span class="badge" id="alCount">0</span></span>
+        <button class="ghost" id="openAddAlumnoModalBtn" type="button">Agregar alumno nuevo</button>
+      </h2>
+      <div class="body">
+        <div class="row3">
+          <div>
+            <label>Estado</label>
+            <div class="filter-toggle" role="group" aria-label="Filtrar alumnos por estado">
+              <button class="ghost active" id="alFilterActivos" type="button" aria-pressed="true">Activos</button>
+              <button class="ghost" id="alFilterInactivos" type="button" aria-pressed="false">Inactivos</button>
+            </div>
+          </div>
+          <div>
+            <label>Buscar</label>
+            <input id="alSearch" placeholder="Nombre / número / ATA..."/>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre completo</th><th>Edad</th><th>Cuota</th><th>Número ATA</th><th>Rango</th><th>Estado</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="alTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<dialog id="studentModal" class="student-modal" aria-labelledby="studentModalTitle">
+  <div class="student-modal__header">
+    <h3 id="studentModalTitle" data-student-title>Ficha del alumno</h3>
+  </div>
+  <div class="student-modal__body">
+    <dl class="student-modal__list" data-student-body></dl>
+  </div>
+  <div class="student-modal__actions">
+    <button type="button" class="ghost" data-student-payments>Pagos</button>
+    <button type="button" class="ghost" data-student-close>Cerrar</button>
+  </div>
+</dialog>
+
+<dialog id="studentPaymentsModal" class="student-modal student-modal--wide" aria-labelledby="studentPaymentsModalTitle">
+  <div class="student-modal__header">
+    <h3 id="studentPaymentsModalTitle" data-student-payments-title>Pagos del mes</h3>
+    <button type="button" class="ghost" data-student-payments-close>Cerrar</button>
+  </div>
+  <div class="student-modal__body">
+    <div class="student-payments__summary">
+      <div>
+        <span class="label">Total pagado</span>
+        <strong data-student-payments-total-paid>$ 0</strong>
+      </div>
+      <div>
+        <span class="label">Total pendiente</span>
+        <strong data-student-payments-total-due>$ 0</strong>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="student-payments-table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Concepto</th>
+            <th>Monto</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody data-student-payments-body></tbody>
+      </table>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="addAlumnoModal" class="student-modal" aria-labelledby="addAlumnoModalTitle">
+  <div class="student-modal__header">
+    <h3 id="addAlumnoModalTitle" data-add-alumno-title>Agregar alumno</h3>
+    <button type="button" class="ghost" data-add-alumno-close>Cerrar</button>
+  </div>
+  <div class="student-modal__body">
+    <div class="row">
+      <div>
+        <label>Nombre</label>
+        <input id="alNombre" placeholder="Ej: Juan Pérez"/>
+      </div>
+      <div>
+        <label>Fecha de nacimiento</label>
+        <input id="alNacimiento" type="date"/>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Edad (automática)</label>
+        <input id="alEdad" type="number" readonly/>
+      </div>
+      <div>
+        <label>Número</label>
+        <input id="alNumero" placeholder="Ej: 09xxxxxxx"/>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Email</label>
+        <input id="alEmail" type="email" placeholder="Opcional"/>
+      </div>
+      <div>
+        <label>Dirección</label>
+        <input id="alDireccion" placeholder="Opcional"/>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Fecha ingreso</label>
+        <input id="alIngreso" type="date" required/>
+      </div>
+      <div>
+        <label>Programa</label>
+        <select id="alPrograma">
+          <option value="BASICO">BASICO</option>
+          <option value="BLACK BELT CLUB">BLACK BELT CLUB</option>
+          <option value="LIDER">LIDER</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Cuota</label>
+        <input id="alCuota" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" required/>
+      </div>
+      <div>
+        <label>Estado</label>
+        <select id="alEstado">
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Rango</label>
+        <select id="alRango">
+          <option value="">Seleccionar rango</option>
+          <option value="BLANCO" class="rango-option rango-option--blanco">BLANCO</option>
+          <option value="NARANJA" class="rango-option rango-option--naranja">NARANJA</option>
+          <option value="AMARILLO" class="rango-option rango-option--amarillo">AMARILLO</option>
+          <option value="CAMUFLADO" class="rango-option rango-option--camuflado">CAMUFLADO</option>
+          <option value="VERDE" class="rango-option rango-option--verde">VERDE</option>
+          <option value="VIOLETA R" class="rango-option rango-option--violeta">VIOLETA R</option>
+          <option value="VIOLETA D" class="rango-option rango-option--violeta-dark">VIOLETA D</option>
+          <option value="AZUL R" class="rango-option rango-option--azul">AZUL R</option>
+          <option value="AZUL D" class="rango-option rango-option--azul-dark">AZUL D</option>
+          <option value="MARRON R" class="rango-option rango-option--marron">MARRON R</option>
+          <option value="MARRON D" class="rango-option rango-option--marron-dark">MARRON D</option>
+          <option value="ROJO R" class="rango-option rango-option--rojo">ROJO R</option>
+          <option value="ROJO D" class="rango-option rango-option--rojo-dark">ROJO D</option>
+          <option value="ROJO NEGRO R" class="rango-option rango-option--rojo-negro">ROJO NEGRO R</option>
+          <option value="ROJO NEGRO D" class="rango-option rango-option--rojo-negro-dark">ROJO NEGRO D</option>
+          <option value="NEGRO PLENO" class="rango-option rango-option--negro">NEGRO PLENO</option>
+          <option value="1BD" class="rango-option rango-option--negro">1BD</option>
+          <option value="2BD" class="rango-option rango-option--negro">2BD</option>
+          <option value="3BD" class="rango-option rango-option--negro">3BD</option>
+          <option value="4BD" class="rango-option rango-option--negro">4BD</option>
+        </select>
+      </div>
+      <div>
+        <label>Número ATA</label>
+        <input id="alAta" placeholder="Opcional"/>
+      </div>
+    </div>
+
+    <div>
+      <label>Notas</label>
+      <textarea id="alNotas" placeholder="Opcional"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="addAlumnoBtn">Guardar alumno</button>
+      <button class="ghost" id="clearAlumnoBtn">Limpiar</button>
+    </div>
+  </div>
+</dialog>
+  
+  <!-- PLANTILLAS -->
+  <section id="tab-plantillas" class="tab" hidden>
+    <div class="card">
+      <h2>Plantillas (meses)</h2>
+      <div class="body">
+        <p class="small">
+          Cada <strong>plantilla</strong> es como “un mes” (o un período). Podés crear una nueva y copiar la anterior para seguir sin arrancar de cero.
+        </p>
+
+        <div class="row">
+          <div>
+            <label>Nombre de la nueva plantilla</label>
+            <input id="tplName" placeholder="Ej: 2025-12"/>
+          </div>
+          <div>
+            <label>Acción</label>
+            <button class="primary" id="createTplBtn" style="width:100%;">Crear (vacía)</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Copiar desde plantilla</label>
+            <select id="tplCloneFrom"></select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="ghost" id="cloneTplBtn" style="width:100%;">Crear copiando</button>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;"/>
+
+        <div class="row">
+          <div>
+            <label>Plantilla activa</label>
+            <select id="tplActive"></select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="ghost danger" id="deleteTplBtn" style="width:100%;">Borrar plantilla activa</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="ghost" id="exportBackupTplBtn">Exportar respaldo (JSON)</button>
+          <button class="ghost" id="importBackupBtn">Importar respaldo (JSON)</button>
+        </div>
+
+        <input id="filePicker" type="file" accept="application/json" hidden/>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="small">Datos guardados en el iPhone (sin internet). Hacé respaldos seguido.</div>
+    <div class="small">v2 — JEEO</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script src="./config.js"></script>
+<script type="module" src="./app.js?v=161"></script>
+
+
+
+</body>
+</html>
