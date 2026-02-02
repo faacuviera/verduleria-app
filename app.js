@@ -2007,11 +2007,19 @@ function loadIngreso(id){
   runFinanceValidation("ingresos");
 }
 function clearIngresoForm(){
-  ["inConcepto","inMonto","inNotas"].forEach(id=>$(id).value="");
-  $("inFecha").value=todayISO();
-  $("inMedio").value="Efectivo";
-  delete $("addIngresoBtn").dataset.editId;
-  $("addIngresoBtn").textContent="Guardar ingreso";
+  ["inConcepto","inMonto","inNotas"].forEach((id) => {
+    const el = $(id);
+    if (el) el.value = "";
+  });
+  const fecha = $("inFecha");
+  if (fecha) fecha.value = todayISO();
+  const medio = $("inMedio");
+  if (medio) medio.value = "Efectivo";
+  const btn = $("addIngresoBtn");
+  if (btn) {
+    delete btn.dataset.editId;
+    btn.textContent = "Guardar ingreso";
+  }
   runFinanceValidation("ingresos");
 }
 function loadGasto(id){
@@ -2599,8 +2607,8 @@ function wireActions(){
     const openAddIngresoModalBtn = $("openAddIngresoModalBtn");
     if (openAddIngresoModalBtn) {
       openAddIngresoModalBtn.addEventListener("click", () => {
-        clearIngresoForm();
         openAddIngresoModal({ title: "Agregar ingreso" });
+        clearIngresoForm();
       });
     }
 
