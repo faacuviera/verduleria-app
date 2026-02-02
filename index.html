@@ -31,7 +31,7 @@
     <button data-tab="gastos">Egresos</button>
     <button data-tab="cxc">Por cobrar</button>
     <button data-tab="cxp">Por pagar</button>
-    <button data-tab="alumnos">Alumnos</button>
+    <button data-tab="alumnos">Proveedores</button>
     <button data-tab="inventario">Inventario</button>
     <button data-tab="plantillas">Plantillas</button>
   </div>
@@ -325,7 +325,7 @@
   <div class="student-modal__body">
     <div class="row">
       <div>
-        <label>Alumno / Cliente</label>
+        <label>Proveedor / Cliente</label>
         <input id="cxcnombre" placeholder="Ej: Agustín Marino"/>
       </div>
       <div>
@@ -477,26 +477,26 @@
   </div>
 </dialog>
 
-<!-- ALUMNOS -->
+  <!-- PROVEEDORES -->
 <section id="tab-alumnos" class="tab" hidden>
   <div class="grid">
     <div class="card">
       <h2>
-        <span>Alumnos <span class="badge" id="alCount">0</span></span>
-        <button class="ghost" id="openAddAlumnoModalBtn" type="button">Agregar alumno nuevo</button>
+        <span>Proveedores <span class="badge" id="alCount">0</span></span>
+        <button class="ghost" id="openAddAlumnoModalBtn" type="button">Agregar proveedor nuevo</button>
       </h2>
       <div class="body">
         <div class="row3">
           <div>
             <label>Estado</label>
-            <div class="filter-toggle" role="group" aria-label="Filtrar alumnos por estado">
+            <div class="filter-toggle" role="group" aria-label="Filtrar proveedores por estado">
               <button class="ghost active" id="alFilterActivos" type="button" aria-pressed="true">Activos</button>
               <button class="ghost" id="alFilterInactivos" type="button" aria-pressed="false">Inactivos</button>
             </div>
           </div>
           <div>
             <label>Buscar</label>
-            <input id="alSearch" placeholder="Nombre / número / ATA..."/>
+            <input id="alSearch" placeholder="Nombre / número / ID..."/>
           </div>
         </div>
 
@@ -517,7 +517,7 @@
 
 <dialog id="studentModal" class="student-modal" aria-labelledby="studentModalTitle">
   <div class="student-modal__header">
-    <h3 id="studentModalTitle" data-student-title>Ficha del alumno</h3>
+    <h3 id="studentModalTitle" data-student-title>Ficha del proveedor</h3>
   </div>
   <div class="student-modal__body">
     <dl class="student-modal__list" data-student-body></dl>
@@ -563,7 +563,7 @@
 
 <dialog id="addAlumnoModal" class="student-modal" aria-labelledby="addAlumnoModalTitle">
   <div class="student-modal__header">
-    <h3 id="addAlumnoModalTitle" data-add-alumno-title>Agregar alumno</h3>
+    <h3 id="addAlumnoModalTitle" data-add-alumno-title>Agregar proveedor</h3>
     <button type="button" class="ghost" data-add-alumno-close>Cerrar</button>
   </div>
   <div class="student-modal__body">
@@ -668,7 +668,7 @@
     </div>
 
     <div class="actions">
-      <button class="primary" id="addAlumnoBtn">Guardar alumno</button>
+      <button class="primary" id="addAlumnoBtn">Guardar proveedor</button>
       <button class="ghost" id="clearAlumnoBtn">Limpiar</button>
     </div>
   </div>

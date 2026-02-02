@@ -9,7 +9,7 @@ const ASSETS = [
   "./Logo.png",
   "./assets/hero-ingresos.svg",
   "./assets/hero-cxc.svg",
-  "./assets/hero-alumnos.svg",
+  "./assets/hero-proveedores.svg",
   "./assets/hero-gastos.svg"
 ];
 self.addEventListener("install",(e)=>{
