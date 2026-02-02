@@ -115,14 +115,14 @@
           <div class="row">
             <div>
               <label>Buscar</label>
-              <input id="ingSearch" placeholder="Alumno / concepto..."/>
+              <input id="ingSearch" placeholder="Ingreso / concepto..."/>
             </div>
           </div>
           <div class="table-wrap" style="margin-top:12px;">
             <table>
               <thead>
                 <tr>
-                  <th>Fecha</th><th>Alumno</th><th>Concepto</th><th>Monto</th><th>Medio</th><th>Estado</th><th>Notas</th><th>Acciones</th>
+                  <th>Fecha</th><th>Ingreso</th><th>Monto</th><th>Medio</th><th>Notas</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody id="ingTbody"></tbody>
@@ -246,10 +246,8 @@
   </div>
   <div class="student-modal__body">
     <div>
-      <label>Alumno</label>
-      <select id="inAlumno" required>
-        <option value="" disabled selected>— Seleccionar alumno —</option>
-      </select>
+      <label>Ingreso</label>
+      <input id="inConcepto" placeholder="Ej: Venta / Servicio / Otro" required/>
     </div>
     <div class="row">
       <div>
@@ -257,47 +255,19 @@
         <input id="inFecha" type="date" required/>
       </div>
       <div>
-        <label>Tipo</label>
-        <select id="inTipo" required>
-          <option value="" disabled selected>— Seleccionar tipo —</option>
-          <option value="Cuota">Cuota</option>
-          <option value="Mercadería">Mercadería</option>
-          <option value="Clase privada">Clase privada</option>
-          <option value="Evento">Evento</option>
-          <option value="Inscripción">Inscripción</option>
-          <option value="Otro">Otro</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <div>
-        <label>Qué pagó</label>
-        <input id="inConcepto" placeholder="Ej: CUOTA / EXAMEN / UNIFORME"/>
-      </div>
-      <div>
         <label>Monto</label>
         <input id="inMonto" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" required/>
       </div>
     </div>
-    <div class="row">
-      <div>
-        <label>Medio de pago</label>
-        <select id="inMedio">
-          <option value="Efectivo">Efectivo</option>
-          <option value="Transferencia">Transferencia</option>
-          <option value="Débito">Débito</option>
-          <option value="Crédito">Crédito</option>
-          <option value="Otro">Otro</option>
-        </select>
-      </div>
-      <div>
-        <label>Estado</label>
-        <select id="inEstado" required>
-          <option value="" disabled selected>— Seleccionar estado —</option>
-          <option value="Pagado">Pagado</option>
-          <option value="Pendiente">Pendiente</option>
-        </select>
-      </div>
+    <div>
+      <label>Medio de pago</label>
+      <select id="inMedio">
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Débito">Débito</option>
+        <option value="Crédito">Crédito</option>
+        <option value="Otro">Otro</option>
+      </select>
     </div>
     <div>
       <label>Notas</label>
