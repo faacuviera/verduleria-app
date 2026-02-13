@@ -454,7 +454,7 @@ let state = {
   templates: [],
   activeTemplateId: null,
   active: null, // current template object
-  filters: { month: monthISO(), search: "", alumnosStatus: "activos", cxcStatus: "pendientes", cxpStatus: "pendientes" },
+  filters: { month: monthISO(), search: "", alumnosStatus: "activos", cxcStatus: "pendientes", cxpStatus: "pendientes", ingresosMedio: "efectivo" },
   selectedAlumno: null
 };
 
@@ -1414,6 +1414,30 @@ function render(){
   renderAll();
 }
 
+function updateIngresosFilterButtons() {
+  const efectivoBtn = $("ingFilterEfectivo");
+  const debitoBtn = $("ingFilterDebito");
+  const creditoBtn = $("ingFilterCredito");
+  if (!efectivoBtn || !debitoBtn || !creditoBtn) return;
+
+  const medio = String(state.filters.ingresosMedio || "efectivo").toLowerCase();
+
+  efectivoBtn.classList.toggle("active", medio === "efectivo");
+  efectivoBtn.setAttribute("aria-pressed", medio === "efectivo" ? "true" : "false");
+
+  debitoBtn.classList.toggle("active", medio === "debito");
+  debitoBtn.setAttribute("aria-pressed", medio === "debito" ? "true" : "false");
+
+  creditoBtn.classList.toggle("active", medio === "credito");
+  creditoBtn.setAttribute("aria-pressed", medio === "credito" ? "true" : "false");
+}
+
+function setIngresosMedioFilter(medio) {
+  state.filters.ingresosMedio = medio;
+  updateIngresosFilterButtons();
+  renderIngresos();
+}
+
 function updateAlumnoFilterButtons() {
   const activosBtn = $("alFilterActivos");
   const inactivosBtn = $("alFilterInactivos");
@@ -1575,9 +1599,18 @@ function renderSearchResultsAcrossTemplates(query){
 
 function renderIngresos(){
   const q = $("ingSearch").value || "";
+  const medioFilter = String(state.filters.ingresosMedio || "efectivo").toLowerCase();
   const rows = (state.active.ingresos || [])
-    .filter(x => textMatch(x, q))
+    .filter((x) => {
+      const medio = String(x?.medio || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "");
+      return medio.includes(medioFilter) && textMatch(x, q);
+    })
     .sort((a,b) => (b.fecha || "").localeCompare(a.fecha || ""));
+
+  updateIngresosFilterButtons();
 
   $("ingCount").textContent = String(rows.length);
 
@@ -2810,6 +2843,15 @@ function wireActions(){
         openAddCxpModal({ title: "Agregar cuenta por pagar" });
       });
     }
+
+    const ingFilterEfectivo = $("ingFilterEfectivo");
+    if (ingFilterEfectivo) ingFilterEfectivo.addEventListener("click", () => setIngresosMedioFilter("efectivo"));
+
+    const ingFilterDebito = $("ingFilterDebito");
+    if (ingFilterDebito) ingFilterDebito.addEventListener("click", () => setIngresosMedioFilter("debito"));
+
+    const ingFilterCredito = $("ingFilterCredito");
+    if (ingFilterCredito) ingFilterCredito.addEventListener("click", () => setIngresosMedioFilter("credito"));
 
     const sA = $("alSearch");
     if (sA) sA.addEventListener("input", renderAlumnos);
