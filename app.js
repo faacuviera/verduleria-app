@@ -1097,6 +1097,7 @@ function collectGlobalSearchHits(query){
   const term = (query || "").trim();
   if (!term) return [];
 
+  const store = xaLoad() || {};
   const templates = state.templates?.length ? state.templates : [];
   const tplList = templates.length ? templates : [];
   const ensureArray = (arr) => Array.isArray(arr) ? arr : [];
@@ -2779,7 +2780,8 @@ function wireActions(){
     });
 
     // Export/Import backups
-    $("exportBackupBtn").addEventListener("click", exportBackup);
+    const exportBackupBtn = $("exportBackupBtn");
+    if (exportBackupBtn) exportBackupBtn.addEventListener("click", exportBackup);
     const exportBackupTplBtn = $("exportBackupTplBtn");
     if (exportBackupTplBtn) exportBackupTplBtn.addEventListener("click", exportBackup);
     $("importBackupBtn").addEventListener("click", ()=> $("filePicker").click());
