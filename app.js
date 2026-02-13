@@ -251,6 +251,7 @@ function getActive() {
   store[id].asistencia ??= [];
   store[id].alumnos ??= [];
   store[id].inventario ??= [];
+  store[id].proveedores ??= [];
 
   ensureAlumnoIds(store[id]);
 
@@ -273,6 +274,7 @@ function setActive(active) {
   store[id].asistencia ??= [];
   store[id].alumnos ??= [];
   store[id].inventario ??= [];
+  store[id].proveedores ??= [];
 
   xaSave(store);
 }
@@ -480,7 +482,8 @@ function emptyTemplate(name){
     cxc: [],
     cxp: [],
     inventario: [],
-    alumnos: []
+    alumnos: [],
+    proveedores: []
   };
 }
 
@@ -491,6 +494,7 @@ function cloneTemplate(fromTpl, name){
   t.alumnos = (fromTpl.alumnos||[]).map(a => ({ ...a, id: uid() }));
   t.cxc = (fromTpl.cxc||[]).map(x=>({...x, id: uid()}));
   t.cxp = (fromTpl.cxp||[]).map(x=>({...x, id: uid()}));
+  t.proveedores = (fromTpl.proveedores||[]).map((x)=>({ ...x, id: x.id || uid() }));
   return t;
 }
 
@@ -928,6 +932,9 @@ function saveActiveData(active) {
 
   // ✅ aseguramos que cxc se guarde siempre
   active.cxc = active.cxc || [];
+  active.cxp = active.cxp || [];
+  active.gastos = active.gastos || [];
+  active.proveedores = active.proveedores || [];
 
   store[id] = active;
   xaSave(store);
@@ -1205,6 +1212,91 @@ function requireMontoValue(value, contextLabel){
     return null;
   }
   return res.amount;
+}
+
+function getSaldoCxp(cxp) {
+  if (!cxp) return 0;
+  const baseMonto = Number(cxp.monto || 0);
+  const parsedSaldo = Number(cxp.saldo);
+  if (Number.isFinite(parsedSaldo) && parsedSaldo >= 0) return parsedSaldo;
+  return baseMonto;
+}
+
+function normalizeProveedor(nombre) {
+  return String(nombre || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function upsertProveedor(data, nombre) {
+  const normalized = normalizeProveedor(nombre);
+  if (!normalized) return null;
+
+  data.proveedores ??= [];
+  const list = Array.isArray(data.proveedores) ? data.proveedores : [];
+  data.proveedores = list;
+
+  const found = list.find((item) => normalizeProveedor(item?.nombre) === normalized);
+  if (found) {
+    if (!found.id) found.id = uid();
+    if (!String(found.nombre || "").trim()) found.nombre = String(nombre || "").trim();
+    return found;
+  }
+
+  const proveedor = { id: uid(), nombre: String(nombre || "").trim() };
+  list.push(proveedor);
+  return proveedor;
+}
+
+function getPendingCxpOptions(active) {
+  return (active?.cxp || []).filter((cxp) => {
+    const isPaid = String(cxp.estado || "").toLowerCase() === "pagado";
+    return !isPaid && getSaldoCxp(cxp) > 0;
+  });
+}
+
+function renderGastoCxpOptions(selectedId = "") {
+  const select = $("gaCxpId");
+  if (!select) return;
+
+  const active = state.active || getActive();
+  const rows = getPendingCxpOptions(active);
+  const previous = selectedId || select.value || "";
+
+  const options = ['<option value="">Sin vínculo</option>'];
+  for (const cxp of rows) {
+    const saldo = money(getSaldoCxp(cxp));
+    const proveedor = cxp.proveedor || "Sin proveedor";
+    const concepto = cxp.concepto || "Sin concepto";
+    const vence = cxp.vence || "sin vencimiento";
+    const isSelected = previous && previous === cxp.id ? " selected" : "";
+    const label = proveedor + " - " + concepto + " · Saldo: " + saldo + " · Vence: " + vence;
+    options.push('<option value="' + escAttr(cxp.id) + '"' + isSelected + '>' + escAttr(label) + '</option>');
+  }
+
+  select.innerHTML = options.join("");
+}
+
+function applySelectedCxpToGasto() {
+  const select = $("gaCxpId");
+  if (!select) return;
+
+  const cxpId = select.value || "";
+  if (!cxpId) return;
+
+  const active = state.active || getActive();
+  const cxp = (active.cxp || []).find((item) => item.id === cxpId);
+  if (!cxp) return;
+
+  const proveedor = String(cxp.proveedor || "").trim();
+  const concepto = String(cxp.concepto || "").trim();
+  const autoConcepto = "Pago a " + (proveedor || "proveedor") + (concepto ? " - " + concepto : "");
+  const saldo = getSaldoCxp(cxp);
+
+  const conceptoInput = $("gaConcepto");
+  const montoInput = $("gaMonto");
+  if (conceptoInput && !conceptoInput.value.trim()) conceptoInput.value = autoConcepto;
+  if (montoInput && (!montoInput.value || Number(montoInput.value) <= 0)) montoInput.value = String(saldo);
+
+  runFinanceValidation("gastos");
 }
 
 /* ---------- Inline form validation helpers ---------- */
@@ -1872,6 +1964,7 @@ function renderCxp(){
         <td>${r.proveedor||""}</td>
         <td>${r.concepto||""}</td>
         <td>${money(r.monto||0)}</td>
+        <td>${money(getSaldoCxp(r))}</td>
         <td><span class="badge ${badgeClass}">${overdue ? "Vencido" : (r.estado||"")}</span></td>
         <td class="note-cell">${noteHtml(r.notas)}</td>
         <td class="actions-cell">
@@ -1889,6 +1982,7 @@ function renderCxp(){
         <td><input id="ed_cxp_proveedor_${r.id}" value="${escAttr(r.proveedor||"")}" /></td>
         <td><input id="ed_cxp_concepto_${r.id}" value="${escAttr(r.concepto||"")}" /></td>
         <td><input id="ed_cxp_monto_${r.id}" type="number" min="0" step="1" value="${escAttr(r.monto ?? 0)}" /></td>
+        <td>${money(getSaldoCxp(r))}</td>
         <td>
           <select id="ed_cxp_estado_${r.id}">
             <option value="Pendiente" ${r.estado==="Pendiente" ? "selected" : ""}>Pendiente</option>
@@ -2034,6 +2128,9 @@ function loadGasto(id){
   $("gaMonto").value     = String(r.monto ?? "");
   $("gaCategoria").value = r.categoria || "";
   $("gaNotas").value     = r.notas || "";
+  renderGastoCxpOptions(r.cxpId || "");
+  const gaCxp = $("gaCxpId");
+  if (gaCxp) gaCxp.value = r.cxpId || "";
 
   $("addGastoBtn").dataset.editId = id;
   $("addGastoBtn").textContent = "Actualizar egreso";
@@ -2044,6 +2141,9 @@ function loadGasto(id){
 function clearGastoForm(){
   ["gaConcepto","gaMonto","gaCategoria","gaNotas"].forEach(id=>$(id).value="");
   $("gaFecha").value=todayISO();
+  renderGastoCxpOptions("");
+  const gaCxp = $("gaCxpId");
+  if (gaCxp) gaCxp.value = "";
   delete $("addGastoBtn").dataset.editId;
   $("addGastoBtn").textContent="Guardar egreso";
   runFinanceValidation("gastos");
@@ -2108,9 +2208,23 @@ function saveCxp(id) {
   if (!concepto) return alert("El concepto no puede quedar vacío.");
 
   const active = getActive();
+  const proveedorData = upsertProveedor(active, proveedor);
   active.cxp = (active.cxp || []).map(c => {
     if (c.id !== id) return c;
-    const next = { ...c, proveedor, vence, concepto, monto, estado, notas };
+    const saldoPrevio = getSaldoCxp(c);
+    const montoOriginal = Number(c.montoOriginal || c.monto || monto || 0);
+    const next = {
+      ...c,
+      proveedor,
+      proveedorId: proveedorData?.id || c.proveedorId || "",
+      vence,
+      concepto,
+      monto,
+      montoOriginal,
+      saldo: isPaid ? 0 : Math.min(saldoPrevio, monto),
+      estado,
+      notas
+    };
     if (isPaid) next.pagadoEn = c.pagadoEn || todayISO();
     else delete next.pagadoEn;
     return next;
@@ -2286,7 +2400,13 @@ function markCxpPaid(id) {
   if (!ok) return;
 
   const cxp = active.cxp[idx];
-  active.cxp[idx] = { ...cxp, estado: "Pagado", pagadoEn: todayISO() };
+  active.cxp[idx] = {
+    ...cxp,
+    montoOriginal: Number(cxp.montoOriginal || cxp.monto || 0),
+    saldo: 0,
+    estado: "Pagado",
+    pagadoEn: todayISO()
+  };
 
   syncCxpExpense(active, active.cxp[idx]);
 
@@ -2395,6 +2515,7 @@ function wireActions(){
       active.gastos ??= [];
       const prev = editId ? active.gastos.find(g => g.id === editId) : null;
 
+      const cxpId = $("gaCxpId")?.value || "";
       const payload = {
         concepto: values.concepto || "",
         fecha: values.fecha || todayISO(),
@@ -2402,9 +2523,11 @@ function wireActions(){
         categoria,
         notas
       };
+      if (cxpId) payload.cxpId = cxpId;
 
       if (editId) {
         if (!prev) return alert("No encontré ese egreso para editar.");
+        if (prev.cxpId) return alert("Los egresos vinculados a una cuenta por pagar no se editan desde esta lista. Borralo y crealo de nuevo.");
 
         active.gastos = active.gastos.map(g => (g.id === editId ? { ...g, ...payload } : g));
 
@@ -2412,6 +2535,31 @@ function wireActions(){
         delete btn.dataset.editId;
         btn.textContent = "Agregar egreso";
 
+      } else if (cxpId) {
+        const cxpIdx = (active.cxp || []).findIndex((c) => c.id === cxpId);
+        if (cxpIdx < 0) return alert("No encontré la cuenta por pagar seleccionada.");
+
+        const cxp = active.cxp[cxpIdx];
+        const saldoActual = getSaldoCxp(cxp);
+        const montoPago = Number(payload.monto || 0);
+
+        if (!Number.isFinite(montoPago) || montoPago <= 0) return alert("Ingresá un monto mayor a cero para registrar el pago.");
+        if (montoPago > saldoActual) return alert("El pago no puede superar el saldo actual de la cuenta.");
+
+        const saldoNuevo = Number((saldoActual - montoPago).toFixed(2));
+        const estadoAnterior = String(cxp.estado || "").toLowerCase();
+        const estabaVencido = estadoAnterior === "vencido";
+
+        active.cxp[cxpIdx] = {
+          ...cxp,
+          montoOriginal: Number(cxp.montoOriginal || cxp.monto || 0),
+          saldo: saldoNuevo,
+          estado: saldoNuevo === 0 ? "Pagado" : (estabaVencido ? "Vencido" : "Pendiente"),
+          pagadoEn: saldoNuevo === 0 ? payload.fecha : undefined
+        };
+        if (saldoNuevo !== 0) delete active.cxp[cxpIdx].pagadoEn;
+
+        active.gastos.push({ id: uid(), ...payload, cxpId });
       } else {
         active.gastos.push({ id: uid(), ...payload });
       }
@@ -2427,6 +2575,9 @@ function wireActions(){
 
     const btnClearGasto = $("clearGastoBtn");
     if (btnClearGasto) btnClearGasto.addEventListener("click", clearGastoForm);
+
+    const gaCxpId = $("gaCxpId");
+    if (gaCxpId) gaCxpId.addEventListener("change", applySelectedCxpToGasto);
 
     const btnClearCxc = $("clearCxcBtn");
     if (btnClearCxc) btnClearCxc.addEventListener("click", clearCxcForm);
@@ -2459,19 +2610,31 @@ function wireActions(){
       const { hasError, values } = runFinanceValidation("cxp");
       if (hasError) return;
 
+      const active = state.active || getActive();
+      const proveedor = values.proveedor || "";
+      const proveedorData = upsertProveedor(active, proveedor);
+      const monto = values.monto ?? 0;
+      const editId = $("addCxpBtn").dataset.editId;
+      const prev = editId ? (active.cxp || []).find((c) => c.id === editId) : null;
+
       const data={
-        id: $("addCxpBtn").dataset.editId || uid(),
-        proveedor: values.proveedor || "",
+        id: editId || uid(),
+        proveedor,
+        proveedorId: proveedorData?.id || prev?.proveedorId || "",
         vence: values.vence || todayISO(),
         concepto: values.concepto || "",
-        monto: values.monto ?? 0,
+        monto,
+        montoOriginal: Number(prev?.montoOriginal || prev?.monto || monto || 0),
+        saldo: Number(prev ? Math.min(getSaldoCxp(prev), monto) : monto),
         estado: $("cxpestado").value,
         notas: $("cxpnotas").value.trim()
       };
       const isPaid = String(data.estado || "").toLowerCase() === "pagado";
-      if (isPaid) data.pagadoEn = data.pagadoEn || todayISO();
-      upsert("cxp", data, $("addCxpBtn").dataset.editId);
-      const active = state.active || getActive();
+      if (isPaid) {
+        data.saldo = 0;
+        data.pagadoEn = prev?.pagadoEn || todayISO();
+      }
+      upsert("cxp", data, editId);
       const saved = (active.cxp || []).find(c => c.id === data.id);
       syncCxpExpense(active, saved);
       state.active = active;
@@ -2619,6 +2782,7 @@ function wireActions(){
     if (openAddGastoModalBtn) {
       openAddGastoModalBtn.addEventListener("click", () => {
         clearGastoForm();
+        renderGastoCxpOptions("");
         openAddGastoModal({ title: "Agregar egreso" });
       });
     }

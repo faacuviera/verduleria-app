@@ -228,7 +228,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>Vence</th><th>Proveedor</th><th>Concepto</th><th>Monto</th><th>Estado</th><th>Notas</th><th>Acciones</th>
+                  <th>Vence</th><th>Proveedor</th><th>Concepto</th><th>Monto</th><th>Saldo</th><th>Estado</th><th>Notas</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody id="cxpTbody"></tbody>
@@ -286,6 +286,12 @@
     <button type="button" class="ghost" data-add-gasto-close>Cerrar</button>
   </div>
   <div class="student-modal__body">
+    <div>
+      <label>Cuenta por pagar (opcional)</label>
+      <select id="gaCxpId">
+        <option value="">Sin vínculo</option>
+      </select>
+    </div>
     <div class="row">
       <div>
         <label>Qué pagaste</label>
